@@ -277,39 +277,87 @@ static void printTimelineHeader(formatted_raw_ostream &OS, unsigned Cycles) {
   }
   OS << '\n';
 }
-
 void TimelineView::printTimeline(raw_ostream &OS) const {
-  formatted_raw_ostream FOS(OS);
-  printTimelineHeader(FOS, LastCycle);
-  FOS.flush();
+  std::error_code err;
+  raw_fd_ostream f("-", err);
+  f << "\ndigraph asm_out {\n";
+  struct InstData {
+    uint32_t timelineIdx;
+    uint32_t executionStartCycle;
+    bool operator<(const InstData &b) const {
+      return executionStartCycle < b.executionStartCycle;
+    }
+  };
+  // we need to sort the instructions by execution start
+  // we also insert a dummy entry node
+  std::vector<InstData> insts{{~0u, 0u}};
+  f << 'i' << ~0u << " [style = invis];\n";
 
-  unsigned IID = 0;
-  ArrayRef<llvm::MCInst> Source = getSource();
-  const unsigned Iterations = Timeline.size() / Source.size();
-  for (unsigned Iteration = 0; Iteration < Iterations; ++Iteration) {
-    for (const MCInst &Inst : Source) {
-      const TimelineViewEntry &Entry = Timeline[IID];
-      // When an instruction is retired after timeline-max-cycles,
-      // its CycleRetired is left at 0. However, it's possible for
-      // a 0 latency instruction to be retired during cycle 0 and we
-      // don't want to early exit in that case. The CycleExecuted
-      // attribute is set correctly whether or not it is greater
-      // than timeline-max-cycles so we can use that to ensure
-      // we don't early exit because of a 0 latency instruction.
-      if (Entry.CycleRetired == 0 && Entry.CycleExecuted != 0) {
-        FOS << "Truncated display due to cycle limit\n";
-        return;
-      }
+  // FIXME: Coloring is merely to identify layout problems.
+  // I used dot engine with SVG outs.
+  std::string colors[] = {"yellow", "Turquoise ", "LightSalmon"};
 
-      unsigned SourceIndex = IID % Source.size();
-      printTimelineViewEntry(FOS, Entry, Iteration, SourceIndex);
-      FOS << "   " << printInstructionString(Inst) << '\n';
-      FOS.flush();
-
-      ++IID;
+  // create nodes with asm instructions
+  for (uint32_t i = 0; i < Timeline.size(); ++i) {
+    insts.push_back({i, Timeline[i].CycleIssued});
+    f << 'i' << i << " [label = \"";
+    MCIP.printInst(&Source[i % Source.size()], i, "", STI, f);
+    f << "\", shape=box, style=filled, fillcolor="
+      << colors[Timeline[i].CycleIssued % 3] << "];\n";
+  }
+  std::stable_sort(insts.begin(), insts.end());
+  auto emitEdge = [&f](uint32_t i, uint32_t j) {
+    f << 'i' << i << " -> " << 'i' << j << '\n';
+  };
+  // create the edges
+  uint32_t lastI = 0;
+  for (uint32_t i = 1; i < insts.size(); ++i) {
+    // if instructions start getting executed at the same time they are
+    // independent create edges from the previous level node to all of them
+    if (insts[lastI].executionStartCycle == insts[i].executionStartCycle) {
+      emitEdge(insts[lastI - 1].timelineIdx, insts[i].timelineIdx);
+      continue;
+    }
+    // we reached a new execution level
+    // create edges from all previous level nodes
+    for (; lastI < i; ++lastI) {
+      emitEdge(insts[lastI].timelineIdx, insts[i].timelineIdx);
     }
   }
+  f << '}';
 }
+// void TimelineView::printTimeline(raw_ostream &OS) const {
+//   formatted_raw_ostream FOS(OS);
+//   printTimelineHeader(FOS, LastCycle);
+//   FOS.flush();
+
+//   unsigned IID = 0;
+//   ArrayRef<llvm::MCInst> Source = getSource();
+//   const unsigned Iterations = Timeline.size() / Source.size();
+//   for (unsigned Iteration = 0; Iteration < Iterations; ++Iteration) {
+//     for (const MCInst &Inst : Source) {
+//       const TimelineViewEntry &Entry = Timeline[IID];
+//       // When an instruction is retired after timeline-max-cycles,
+//       // its CycleRetired is left at 0. However, it's possible for
+//       // a 0 latency instruction to be retired during cycle 0 and we
+//       // don't want to early exit in that case. The CycleExecuted
+//       // attribute is set correctly whether or not it is greater
+//       // than timeline-max-cycles so we can use that to ensure
+//       // we don't early exit because of a 0 latency instruction.
+//       if (Entry.CycleRetired == 0 && Entry.CycleExecuted != 0) {
+//         FOS << "Truncated display due to cycle limit\n";
+//         return;
+//       }
+
+//       unsigned SourceIndex = IID % Source.size();
+//       printTimelineViewEntry(FOS, Entry, Iteration, SourceIndex);
+//       FOS << "   " << printInstructionString(Inst) << '\n';
+//       FOS.flush();
+
+//       ++IID;
+//     }
+//   }
+// }
 
 json::Value TimelineView::toJSON() const {
   json::Array TimelineInfo;

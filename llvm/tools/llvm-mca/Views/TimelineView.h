@@ -177,7 +177,7 @@ public:
   void printAverageWaitTimes(llvm::raw_ostream &OS) const;
   void printView(llvm::raw_ostream &OS) const override {
     printTimeline(OS);
-    printAverageWaitTimes(OS);
+    //printAverageWaitTimes(OS);
   }
   StringRef getNameAsString() const override { return "TimelineView"; }
   json::Value toJSON() const override;

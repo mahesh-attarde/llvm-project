@@ -25,6 +25,7 @@ namespace mca {
 
 // The base class for views that deal with individual machine instructions.
 class InstructionView : public View {
+protected:
   const llvm::MCSubtargetInfo &STI;
   llvm::MCInstPrinter &MCIP;
   llvm::ArrayRef<llvm::MCInst> Source;
