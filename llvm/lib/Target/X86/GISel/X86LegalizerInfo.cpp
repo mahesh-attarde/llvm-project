@@ -13,6 +13,7 @@
 #include "X86LegalizerInfo.h"
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
+#include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -630,6 +631,12 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .minScalar(0, LLT::scalar(32))
       .libcall();
 
+  getActionDefinitionsBuilder(G_IS_FPCLASS)
+      .legalFor(HasSSE1 || UseX87, {s8, s32})
+      .legalFor(HasSSE2 || UseX87, {s8, s64})
+      .legalFor(UseX87, {s8, s80})
+      .custom();
+
   getActionDefinitionsBuilder({G_FREEZE, G_CONSTANT_FOLD_BARRIER})
     .legalFor({s8, s16, s32, s64, p0})
     .widenScalarToNextPow2(0, /*Min=*/8)
@@ -653,6 +660,8 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return legalizeFPTOUI(MI, MRI, Helper);
   case TargetOpcode::G_UITOFP:
     return legalizeUITOFP(MI, MRI, Helper);
+  case TargetOpcode::G_IS_FPCLASS:
+    return legalizeISFPCLASS(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
 }
@@ -728,6 +737,169 @@ bool X86LegalizerInfo::legalizeFPTOUI(MachineInstr &MI,
   return false;
 }
 
+/// Returns a true value if if this FPClassTest can be performed with an ordered
+/// fcmp to 0, and a false value if it's an unordered fcmp to 0. Returns
+/// std::nullopt if it cannot be performed as a compare with 0.
+static std::optional<bool> isFCmpEqualZero(FPClassTest Test,
+                                           const fltSemantics &Semantics,
+                                           const MachineFunction &MF) {
+  FPClassTest OrderedMask = Test & ~fcNan;
+  FPClassTest NanTest = Test & fcNan;
+  bool IsOrdered = NanTest == fcNone;
+  bool IsUnordered = NanTest == fcNan;
+
+  // Skip cases that are testing for only a qnan or snan.
+  if (!IsOrdered && !IsUnordered)
+    return std::nullopt;
+
+  if (OrderedMask == fcZero &&
+      MF.getDenormalMode(Semantics).Input == DenormalMode::IEEE)
+    return IsOrdered;
+  if (OrderedMask == (fcZero | fcSubnormal) &&
+      MF.getDenormalMode(Semantics).inputsAreZero())
+    return IsOrdered;
+  return std::nullopt;
+}
+
+bool X86LegalizerInfo::legalizeISFPCLASS(MachineInstr &MI,
+                                         MachineRegisterInfo &MRI,
+                                         LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  FPClassTest Mask = static_cast<FPClassTest>(MI.getOperand(2).getImm());
+
+  if (Mask == fcNone) {
+    MIRBuilder.buildConstant(DstReg, 0);
+    MI.eraseFromParent();
+    return true;
+  }
+  if (Mask == fcAllFlags) {
+    MIRBuilder.buildConstant(DstReg, 1);
+    MI.eraseFromParent();
+    return true;
+  }
+  const fltSemantics &Semantics = getFltSemanticForLLT(SrcTy.getScalarType());
+  LLT DstTyCopy = DstTy;
+  auto Res = MIRBuilder.buildConstant(DstTy, 0);
+  const auto appendToRes = [&](MachineInstrBuilder ToAppend) {
+    Res = MIRBuilder.buildOr(DstTyCopy, Res, ToAppend);
+  };
+  // Some checks can be implemented using float comparisons, if floating point
+  // exceptions are ignored.
+  if (MI.getFlag(MachineInstr::NoFPExcept)) {
+    FPClassTest FPTestMask = Mask;
+    bool IsInvertedFP = false;
+    if (FPClassTest InvertedFPCheck =
+            invertFPClassTestIfSimpler(FPTestMask, true)) {
+      FPTestMask = InvertedFPCheck;
+      IsInvertedFP = true;
+    }
+
+    CmpInst::Predicate OrderedCmpOpcode =
+        IsInvertedFP ? CmpInst::FCMP_UNE : CmpInst::FCMP_OEQ;
+    CmpInst::Predicate UnorderedCmpOpcode =
+        IsInvertedFP ? CmpInst::FCMP_ONE : CmpInst::FCMP_UEQ;
+    // See if we can fold an | fcNan into an unordered compare.
+    FPClassTest OrderedFPTestMask = FPTestMask & ~fcNan;
+
+    // Can't fold the ordered check if we're only testing for snan or qnan
+    // individually.
+    if ((FPTestMask & fcNan) != fcNan)
+      OrderedFPTestMask = FPTestMask;
+
+    const bool IsOrdered = FPTestMask == OrderedFPTestMask;
+    if (std::optional<bool> IsCmp0 =
+            isFCmpEqualZero(FPTestMask, Semantics, *MI.getMF());
+        IsCmp0) {
+      // TODO: Check Cond is valid for SrcTy
+
+      // If denormals could be implicitly treated as 0, this is not equivalent
+      // to a compare with 0 since it will also be true for denormals.
+      appendToRes(MIRBuilder.buildFCmp(
+          *IsCmp0 ? OrderedCmpOpcode : UnorderedCmpOpcode, DstReg, SrcReg,
+          MIRBuilder.buildFConstant(SrcTy, 0.0)));
+      return true;
+    }
+    if (FPTestMask == fcNan) {
+      // TODO: Check Cond is valid for SrcTy
+      appendToRes(MIRBuilder.buildFCmp(IsInvertedFP ? CmpInst::FCMP_ORD
+                                                    : CmpInst::FCMP_UNO,
+                                       DstReg, SrcReg, SrcReg));
+      return true;
+    }
+
+    bool IsOrderedInf = FPTestMask == fcInf;
+    if ((FPTestMask == fcInf || FPTestMask == (fcInf | fcNan))) {
+      // TODO: Check Cond is valid for SrcTy
+      // isinf(x) --> fabs(x) == inf
+      auto Abs = MIRBuilder.buildFAbs(SrcTy, SrcReg);
+      auto Inf = MIRBuilder.buildFConstant(SrcTy, APFloat::getInf(Semantics));
+      appendToRes(MIRBuilder.buildFCmp(IsOrderedInf ? OrderedCmpOpcode
+                                                    : UnorderedCmpOpcode,
+                                       DstReg, Abs, Inf));
+      return true;
+    }
+
+    if (OrderedFPTestMask == fcPosInf || OrderedFPTestMask == fcNegInf) {
+      // isposinf(x) --> x == inf
+      // isneginf(x) --> x == -inf
+      // isposinf(x) || nan --> x u== inf
+      // isneginf(x) || nan --> x u== -inf
+      auto Inf = MIRBuilder.buildFConstant(
+          SrcTy, APFloat::getInf(Semantics, OrderedFPTestMask == fcNegInf));
+      appendToRes(MIRBuilder.buildFCmp(IsOrdered ? OrderedCmpOpcode
+                                                 : UnorderedCmpOpcode,
+                                       DstReg, SrcReg, Inf));
+      return true;
+    }
+
+    if (OrderedFPTestMask == (fcSubnormal | fcZero) && !IsOrdered) {
+      // TODO: Could handle ordered case, but it produces worse code for
+      // x86. Maybe handle ordered if fabs is free?
+
+      CmpInst::Predicate OrderedOp =
+          IsInvertedFP ? CmpInst::FCMP_UGE : CmpInst::FCMP_OLT;
+      CmpInst::Predicate UnorderedOp =
+          IsInvertedFP ? CmpInst::FCMP_OGE : CmpInst::FCMP_ULT;
+      // (issubnormal(x) || iszero(x)) --> fabs(x) < smallest_normal
+
+      // TODO: Maybe only makes sense if fabs is free. Integer test of
+      // exponent bits seems better for x86.
+      auto Abs = MIRBuilder.buildFAbs(SrcTy, SrcReg);
+      auto SmallestNormal = MIRBuilder.buildFConstant(
+          SrcTy, APFloat::getSmallestNormalized(Semantics));
+      appendToRes(MIRBuilder.buildFCmp(IsOrdered ? OrderedCmpOpcode
+                                                 : UnorderedCmpOpcode,
+                                       DstReg, Abs, SmallestNormal));
+      return true;
+    }
+
+    if (FPTestMask == fcNormal) {
+      // TODO: Handle unordered
+      CmpInst::Predicate IsFiniteOp =
+          IsInvertedFP ? CmpInst::FCMP_UGE : CmpInst::FCMP_OLT;
+      CmpInst::Predicate IsNormalOp =
+          IsInvertedFP ? CmpInst::FCMP_OLT : CmpInst::FCMP_UGE;
+      // isnormal(x) --> fabs(x) < infinity && !(fabs(x) < smallest_normal)
+      auto Inf = MIRBuilder.buildFConstant(SrcTy, APFloat::getInf(Semantics));
+      auto SmallestNormal = MIRBuilder.buildFConstant(
+          SrcTy, APFloat::getSmallestNormalized(Semantics));
+      auto Abs = MIRBuilder.buildFAbs(SrcTy, SrcReg);
+      auto IsFinite = MIRBuilder.buildFCmp(IsFiniteOp, DstReg, Abs, Inf);
+      auto IsNormal =
+          MIRBuilder.buildFCmp(IsNormalOp, DstReg, Abs, SmallestNormal);
+      if (IsInvertedFP)
+        appendToRes(MIRBuilder.buildOr(DstReg, IsFinite, IsNormal));
+      return true;
+      appendToRes(MIRBuilder.buildAnd(DstReg, IsFinite, IsNormal));
+      return true;
+    }
+  }
+
+  // Some checks may be represented as inversion of simpler check, for example
+  // "inf|normal|subnormal|zero" => !"nan".
+  return false;
+}
 bool X86LegalizerInfo::legalizeUITOFP(MachineInstr &MI,
                                       MachineRegisterInfo &MRI,
                                       LegalizerHelper &Helper) const {
