@@ -13,6 +13,7 @@
 #include "X86LegalizerInfo.h"
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
+#include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -631,6 +632,16 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                                G_STACKSAVE,
                                G_STACKRESTORE}).lower();
 
+  getActionDefinitionsBuilder(G_IS_FPCLASS)
+      .legalFor(HasSSE1 || UseX87, {s8, s32})
+      .legalFor(HasSSE2 || UseX87, {s8, s64})
+      .legalFor(UseX87, {s8, s80})
+      .custom();
+
+  getActionDefinitionsBuilder(G_FABS)
+      .legalFor(UseX87, {s8, s80})
+      .lower();
+
   // fp intrinsics
   getActionDefinitionsBuilder(G_INTRINSIC_ROUNDEVEN)
       .scalarize(0)
@@ -660,6 +671,8 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return legalizeFPTOUI(MI, MRI, Helper);
   case TargetOpcode::G_UITOFP:
     return legalizeUITOFP(MI, MRI, Helper);
+  case TargetOpcode::G_IS_FPCLASS:
+    return expandIS_FPCLASS(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
 }
@@ -757,4 +770,39 @@ bool X86LegalizerInfo::legalizeUITOFP(MachineInstr &MI,
 bool X86LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                          MachineInstr &MI) const {
   return true;
+}
+
+bool X86LegalizerInfo::expandFPClassTestForF32OrF64(
+    MachineInstr &MI, MachineRegisterInfo &MRI, LegalizerHelper &Helper) const {
+  return false;
+}
+
+bool X86LegalizerInfo::expandFPClassTestForF80(MachineInstr &MI,
+                                               MachineRegisterInfo &MRI,
+                                               LegalizerHelper &Helper) const {
+  return false;
+}
+
+bool X86LegalizerInfo::expandIS_FPCLASS(MachineInstr &MI,
+                                        MachineRegisterInfo &MRI,
+                                        LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  assert(!SrcTy.isVector() && "G_IS_FPCLASS does not support vectors yet");
+
+  FPClassTest Mask = static_cast<FPClassTest>(MI.getOperand(2).getImm());
+  if (Mask == fcNone) {
+    MIRBuilder.buildConstant(DstReg, 0);
+    MI.eraseFromParent();
+    return true;
+  }
+  if (Mask == fcAllFlags) {
+    MIRBuilder.buildConstant(DstReg, 1);
+    MI.eraseFromParent();
+    return true;
+  }
+  bool IsF80 = (SrcTy == LLT::scalar(80));
+  if (IsF80)
+    return expandFPClassTestForF80(MI, MRI, Helper);
+  return expandFPClassTestForF32OrF64(MI, MRI, Helper);
 }

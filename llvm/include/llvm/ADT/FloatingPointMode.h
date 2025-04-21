@@ -279,6 +279,29 @@ FPClassTest unknown_sign(FPClassTest Mask);
 /// Write a human readable form of \p Mask to \p OS
 raw_ostream &operator<<(raw_ostream &OS, FPClassTest Mask);
 
+/// Returns a true value if if this FPClassTest can be performed with an ordered
+/// fcmp to 0, and a false value if it's an unordered fcmp to 0. Returns
+/// std::nullopt if it cannot be performed as a compare with 0.
+__attribute__((unused)) static std::optional<bool>
+isFPTestPossibleAsFCmpWithZero(
+    FPClassTest Test, DenormalMode::DenormalModeKind MFdenormalModeKind,
+    bool IsDenormalModeInputZero) {
+  FPClassTest OrderedMask = Test & ~fcNan;
+  FPClassTest NanTest = Test & fcNan;
+  bool IsOrdered = NanTest == fcNone;
+  bool IsUnordered = NanTest == fcNan;
+
+  // Skip cases that are testing for only a qnan or snan.
+  if (!IsOrdered && !IsUnordered)
+    return std::nullopt;
+
+  if (OrderedMask == fcZero && MFdenormalModeKind == DenormalMode::IEEE)
+    return IsOrdered;
+  if (OrderedMask == (fcZero | fcSubnormal) && IsDenormalModeInputZero)
+    return IsOrdered;
+  return std::nullopt;
+}
+
 } // namespace llvm
 
 #endif // LLVM_ADT_FLOATINGPOINTMODE_H

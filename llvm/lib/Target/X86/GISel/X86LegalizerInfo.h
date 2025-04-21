@@ -45,6 +45,14 @@ private:
 
   bool legalizeUITOFP(MachineInstr &MI, MachineRegisterInfo &MRI,
                       LegalizerHelper &Helper) const;
+
+  bool expandIS_FPCLASS(MachineInstr &MI, MachineRegisterInfo &MRI,
+                        LegalizerHelper &Helper) const;
+
+  bool expandFPClassTestForF32OrF64(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                    LegalizerHelper &Helper) const;
+  bool expandFPClassTestForF80(MachineInstr &MI, MachineRegisterInfo &MRI,
+                               LegalizerHelper &Helper) const;
 };
 } // namespace llvm
 #endif
