@@ -2567,15 +2567,12 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
   case Intrinsic::is_fpclass: {
-    uint32_t Flags = MachineInstr::copyFlagsFromInstruction(CI);
-    Flags |=
-        CI.hasFnAttr(llvm::Attribute::StrictFP) ? MachineInstr::NoFPExcept : 0;
     Value *FpValue = CI.getOperand(0);
     ConstantInt *TestMaskValue = cast<ConstantInt>(CI.getOperand(1));
 
     MIRBuilder
         .buildInstr(TargetOpcode::G_IS_FPCLASS, {getOrCreateVReg(CI)},
-                    {getOrCreateVReg(*FpValue)}, Flags)
+                    {getOrCreateVReg(*FpValue)})
         .addImm(TestMaskValue->getZExtValue());
 
     return true;
