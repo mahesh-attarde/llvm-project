@@ -46,6 +46,9 @@ private:
   bool legalizeUITOFP(MachineInstr &MI, MachineRegisterInfo &MRI,
                       LegalizerHelper &Helper) const;
 
+  bool legalizeBitcast(MachineInstr &MI, MachineRegisterInfo &MRI,
+                       LegalizerHelper &Helper) const;
+
   bool expandIS_FPCLASS(MachineInstr &MI, MachineRegisterInfo &MRI,
                         LegalizerHelper &Helper) const;
 

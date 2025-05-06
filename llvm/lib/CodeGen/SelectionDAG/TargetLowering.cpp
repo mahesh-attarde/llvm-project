@@ -8706,6 +8706,29 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
   return DAG.getSelect(DL, VT, IsZero, RCmp, MinMax, Flags);
 }
 
+/// Returns a true value if if this FPClassTest can be performed with an ordered
+/// fcmp to 0, and a false value if it's an unordered fcmp to 0. Returns
+/// std::nullopt if it cannot be performed as a compare with 0.
+static std::optional<bool> isFCmpEqualZero(FPClassTest Test,
+                                           const fltSemantics &Semantics,
+                                           const MachineFunction &MF) {
+  FPClassTest OrderedMask = Test & ~fcNan;
+  FPClassTest NanTest = Test & fcNan;
+  bool IsOrdered = NanTest == fcNone;
+  bool IsUnordered = NanTest == fcNan;
+
+  // Skip cases that are testing for only a qnan or snan.
+  if (!IsOrdered && !IsUnordered)
+    return std::nullopt;
+
+  if (OrderedMask == fcZero &&
+      MF.getDenormalMode(Semantics).Input == DenormalMode::IEEE)
+    return IsOrdered;
+  if (OrderedMask == (fcZero | fcSubnormal) &&
+      MF.getDenormalMode(Semantics).inputsAreZero())
+    return IsOrdered;
+  return std::nullopt;
+}
 
 SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
                                          const FPClassTest OrigTestMask,
@@ -8762,13 +8785,10 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
     const bool IsOrdered = FPTestMask == OrderedFPTestMask;
     const MachineFunction &CurMF = DAG.getMachineFunction();
     if (std::optional<bool> IsCmp0 =
-            isFPTestPossibleAsFCmpWithZero(
-                FPTestMask, CurMF.getDenormalMode(Semantics).Input,
-                CurMF.getDenormalMode(Semantics).inputsAreZero()) &&
-            IsCmp0 &&
-            (isCondCodeLegalOrCustom(
-                *IsCmp0 ? OrderedCmpOpcode : UnorderedCmpOpcode,
-                OperandVT.getScalarType().getSimpleVT()))) {
+            isFCmpEqualZero(FPTestMask, Semantics, DAG.getMachineFunction());
+        IsCmp0 && (isCondCodeLegalOrCustom(
+                      *IsCmp0 ? OrderedCmpOpcode : UnorderedCmpOpcode,
+                      OperandVT.getScalarType().getSimpleVT()))) {
 
       // If denormals could be implicitly treated as 0, this is not equivalent
       // to a compare with 0 since it will also be true for denormals.
