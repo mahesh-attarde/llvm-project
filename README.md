@@ -1,44 +1,154 @@
 # The LLVM Compiler Infrastructure
 
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/llvm/llvm-project/badge)](https://securityscorecards.dev/viewer/?uri=github.com/llvm/llvm-project)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8273/badge)](https://www.bestpractices.dev/projects/8273)
-[![libc++](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml/badge.svg?branch=main&event=schedule)](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml?query=event%3Aschedule)
+# LLVM Project Directory Overview
 
-Welcome to the LLVM project!
+This document describes the purpose and contents of each directory in the LLVM source tree.
 
-This repository contains the source code for LLVM, a toolkit for the
-construction of highly optimized compilers, optimizers, and run-time
-environments.
 
-The LLVM project has multiple components. The core of the project is
-itself called "LLVM". This contains all of the tools, libraries, and header
-files needed to process intermediate representations and convert them into
-object files. Tools include an assembler, disassembler, bitcode analyzer, and
-bitcode optimizer.
 
-C-like languages use the [Clang](https://clang.llvm.org/) frontend. This
-component compiles C, C++, Objective-C, and Objective-C++ code into LLVM bitcode
--- and from there into object files, using LLVM.
+## bolt/
 
-Other components include:
-the [libc++ C++ standard library](https://libcxx.llvm.org),
-the [LLD linker](https://lld.llvm.org), and more.
+BOLT: Binary Optimization and Layout Tool. Tools and libraries for post-link binary optimization.
 
-## Getting the Source Code and Building LLVM
+## clang/
 
-Consult the
-[Getting Started with LLVM](https://llvm.org/docs/GettingStarted.html#getting-the-source-code-and-building-llvm)
-page for information on building and running LLVM.
+Clang C/C++/Objective-C compiler frontend.
 
-For information on how to contribute to the LLVM project, please take a look at
-the [Contributing to LLVM](https://llvm.org/docs/Contributing.html) guide.
+- [clang/](clang/)
 
-## Getting in touch
 
-Join the [LLVM Discourse forums](https://discourse.llvm.org/), [Discord
-chat](https://discord.gg/xS7Z362),
-[LLVM Office Hours](https://llvm.org/docs/GettingInvolved.html#office-hours) or
-[Regular sync-ups](https://llvm.org/docs/GettingInvolved.html#online-sync-ups).
+## clang-tools-extra/
 
-The LLVM project has adopted a [code of conduct](https://llvm.org/docs/CodeOfConduct.html) for
-participants to all modes of communication within the project.
+Additional tools built on top of Clang, such as clang-tidy and clangd.
+
+- [clang-tools-extra/](clang-tools-extra/)
+
+
+## cmake/
+
+CMake build system modules and configuration files.
+
+- [cmake/](cmake/)
+
+
+## compiler-rt/
+
+Runtime libraries for compiler-generated code, such as sanitizers and profiling.
+
+- [compiler-rt/](compiler-rt/)
+
+
+## cross-project-tests/
+
+Test suites that span multiple LLVM subprojects.
+
+
+## libc/
+
+LLVM's implementation of the C standard library.
+
+
+## libclc/
+
+OpenCL C library implementation.
+
+
+## libcxx/
+
+LLVM's implementation of the C++ standard library.
+
+
+## libcxxabi/
+
+C++ ABI support library for libc++.
+
+
+## libunwind/
+
+A library to determine the call-chain of a program.
+
+
+## lld/
+
+LLVM's linker.
+
+
+## lldb/
+
+LLVM's debugger.
+
+
+---
+
+## llvm/
+
+The core of the LLVM project. This directory contains the main libraries, tools, and utilities that form the backbone of the LLVM infrastructure. Key components include:
+
+- **lib/**: Core libraries for IR (Intermediate Representation), code generation, optimization passes, target backends, and more.
+- **include/**: Public header files for LLVM APIs.
+- **tools/**: Command-line tools such as `llvm-as`, `llvm-dis`, `llvm-link`, and the main `opt` optimizer.
+- **utils/**: Utility scripts and helper programs for development and testing.
+- **docs/**: Documentation for LLVM internals, APIs, and usage.
+- **test/**: Regression and unit tests for LLVM components.
+- **examples/**: Example programs demonstrating LLVM API usage.
+
+The `llvm/` directory is the foundation for all other LLVM subprojects, providing the infrastructure for compiler frontends, optimizers, code generators, and analysis tools.
+
+---
+
+## mlir/
+
+MLIR (Multi-Level Intermediate Representation) is a subproject of LLVM designed to provide a flexible infrastructure for building reusable and extensible compiler components. MLIR enables the representation and transformation of code at multiple abstraction levels, making it easier to target diverse hardware and optimize across domains.
+
+Key components include:
+
+- **include/mlir/**: Public headers for MLIR APIs, dialect definitions, and core infrastructure.
+- **lib/**: Implementation of MLIR core, dialects, passes, and transformations.
+- **tools/**: MLIR-specific tools such as `mlir-opt` (optimizer), `mlir-translate` (IR translation), and others.
+- **docs/**: Documentation for MLIR concepts, dialects, and developer guides.
+- **test/**: Test suites for MLIR dialects, passes, and tools.
+- **examples/**: Example projects and code demonstrating MLIR usage and extensibility.
+
+MLIR is used both within LLVM and by external projects to build domain-specific compilers, optimize machine learning models, and enable advanced code transformations.
+
+---
+
+## llvm-libgcc/
+
+LLVM's implementation of libgcc runtime routines.
+
+
+## offload/
+
+Support for offloading computation to accelerators.
+
+
+## openmp/
+
+OpenMP runtime and tools.
+
+
+## polly/
+
+Polyhedral optimization framework for LLVM.
+
+
+## pstl/
+
+Parallel STL implementation.
+
+
+## runtimes/
+
+Meta-project for building multiple runtime libraries together.
+
+
+## third-party/
+
+Third-party dependencies and libraries.
+
+
+## utils/
+
+Utility scripts and tools for development and testing.
+
