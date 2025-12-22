@@ -86,6 +86,9 @@
 /* Define if we have z3 and want to build it */
 #cmakedefine LLVM_WITH_Z3 ${LLVM_WITH_Z3}
 
+/* Define if we have OR-Tools and want to use it */
+#cmakedefine LLVM_WITH_ORTOOLS ${LLVM_WITH_ORTOOLS}
+
 /* Define if we have curl and want to use it */
 #cmakedefine LLVM_ENABLE_CURL ${LLVM_ENABLE_CURL}
 

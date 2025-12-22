@@ -239,6 +239,8 @@ LLVM_ABI FunctionPass *createFastRegisterAllocator(RegAllocFilterFunc F,
 /// register allocator using the basic regalloc framework.
 ///
 LLVM_ABI FunctionPass *createBasicRegisterAllocator();
+LLVM_ABI FunctionPass *createILPRegisterAllocator();
+LLVM_ABI FunctionPass *createILPRegisterAllocator(RegAllocFilterFunc F);
 LLVM_ABI FunctionPass *createBasicRegisterAllocator(RegAllocFilterFunc F);
 
 /// Greedy register allocation pass - This pass implements a global register

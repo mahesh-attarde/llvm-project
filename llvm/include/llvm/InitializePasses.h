@@ -272,6 +272,7 @@ LLVM_ABI void initializeReachingDefInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeReassociateLegacyPassPass(PassRegistry &);
 LLVM_ABI void
 initializeRegAllocEvictionAdvisorAnalysisLegacyPass(PassRegistry &);
+LLVM_ABI void initializeRegAllocILPPass(PassRegistry &);
 LLVM_ABI void initializeRegAllocFastPass(PassRegistry &);
 LLVM_ABI void
 initializeRegAllocPriorityAdvisorAnalysisLegacyPass(PassRegistry &);

@@ -801,6 +801,9 @@ if config.expensive_checks:
 if config.have_ondisk_cas:
     config.available_features.add("ondisk_cas")
 
+if getattr(config, "have_ortools", False):
+    config.available_features.add("ortools")
+
 if "MemoryWithOrigins" in config.llvm_use_sanitizer:
     config.available_features.add("use_msan_with_origins")
 

@@ -189,6 +189,7 @@ add_llvm_component_library(LLVMCodeGen
   RegAllocFast.cpp
   RegAllocGreedy.cpp
   RegAllocPBQP.cpp
+  RegAllocILP.cpp
   RegAllocPriorityAdvisor.cpp
   RegAllocScore.cpp
   RegisterClassInfo.cpp
@@ -289,6 +290,10 @@ add_llvm_component_library(LLVMCodeGen
   TargetParser
   TransformUtils
   )
+
+  if(LLVM_WITH_ORTOOLS)
+    target_link_libraries(LLVMCodeGen PRIVATE ortools::ortools)
+  endif()
 
 add_subdirectory(SelectionDAG)
 add_subdirectory(AsmPrinter)

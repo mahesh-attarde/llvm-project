@@ -195,6 +195,7 @@ static_library("CodeGen") {
     "RegAllocEvictionAdvisor.cpp",
     "RegAllocFast.cpp",
     "RegAllocGreedy.cpp",
+    "RegAllocILP.cpp",
     "RegAllocPBQP.cpp",
     "RegAllocPriorityAdvisor.cpp",
     "RegAllocScore.cpp",

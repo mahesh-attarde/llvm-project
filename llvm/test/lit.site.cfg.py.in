@@ -49,6 +49,7 @@ config.llvm_dylib_version = "@LLVM_VERSION_MAJOR@.@LLVM_VERSION_MINOR@@LLVM_VERS
 config.llvm_host_triple = '@LLVM_HOST_TRIPLE@'
 config.host_arch = "@HOST_ARCH@"
 config.have_opt_viewer_modules = @LLVM_HAVE_OPT_VIEWER_MODULES@
+config.have_ortools = @LLVM_WITH_ORTOOLS@
 config.libcxx_used = @LLVM_LIBCXX_USED@
 config.has_plugins = @LLVM_ENABLE_PLUGINS@
 config.linked_bye_extension = @LLVM_BYE_LINK_INTO_TOOLS@

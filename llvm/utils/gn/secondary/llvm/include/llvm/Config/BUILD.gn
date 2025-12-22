@@ -322,6 +322,7 @@ write_cmake_config("llvm-config") {
     "LLVM_VERSION_MINOR=$llvm_version_minor",
     "LLVM_VERSION_PATCH=$llvm_version_patch",
     "LLVM_WITH_Z3=",
+    "LLVM_WITH_ORTOOLS=",
     "PACKAGE_VERSION=${llvm_version}git",
   ]
 

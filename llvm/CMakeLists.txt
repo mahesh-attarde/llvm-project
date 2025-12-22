@@ -658,6 +658,33 @@ endif()
 set(LLVM_ENABLE_Z3_SOLVER_DEFAULT "${Z3_FOUND}")
 
 
+set(LLVM_ORTOOLS_INSTALL_DIR "" CACHE STRING
+  "Install directory of the OR-Tools optimization library.")
+
+option(LLVM_ENABLE_ORTOOLS
+  "Enable support for the OR-Tools solver in LLVM." OFF)
+
+if (LLVM_ENABLE_ORTOOLS)
+  if (LLVM_ORTOOLS_INSTALL_DIR)
+    list(APPEND CMAKE_PREFIX_PATH "${LLVM_ORTOOLS_INSTALL_DIR}")
+  endif()
+
+  find_package(ortools CONFIG)
+
+  if (NOT ortools_FOUND)
+    message(FATAL_ERROR
+      "LLVM_ENABLE_ORTOOLS requires a working OR-Tools CMake package."
+      )
+  endif()
+
+  set(LLVM_WITH_ORTOOLS 1)
+endif()
+
+if(NOT LLVM_WITH_ORTOOLS)
+  set(LLVM_WITH_ORTOOLS 0)
+endif()
+
+
 if( LLVM_TARGETS_TO_BUILD STREQUAL "all" )
   set( LLVM_TARGETS_TO_BUILD ${LLVM_ALL_TARGETS} )
 endif()
