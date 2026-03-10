@@ -9,11 +9,19 @@
 // This tablegen backend emits instruction-selection patterns for specified X86
 // instruction records. When invoked with -gen-x86-inst-patterns and the
 // -inst-record= option, it scans all Pat records and emits those whose
-// destination DAG references any of the specified instruction names.
+// destination DAG references records with names containing any of the
+// specified substrings.
 //
 //===----------------------------------------------------------------------===//
-
-#include "llvm/ADT/StringSet.h"
+/*
+build/bin/llvm-tblgen \
+  -I llvm/include \
+  -I llvm/lib/Target/X86 \
+  -gen-x86-inst-patterns \
+  -inst-record=SHUF,BLEND,BROADCAST,UNPACK \
+  llvm/lib/Target/X86/X86.td \
+  -o /tmp/x86_patterns.out
+*/
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -29,8 +37,8 @@ static cl::OptionCategory X86InstPatternCat("Options for -gen-x86-inst-patterns"
 
 static cl::opt<std::string> InstRecordNames(
     "inst-record",
-    cl::desc("Comma-separated list of X86 instruction record names "
-             "(e.g. ADD32rr,ADD32ri)"),
+    cl::desc("Comma-separated list of X86 instruction record-name substrings "
+             "(e.g. ADD32,ADD64)"),
     cl::value_desc("name1,name2,..."),
     cl::cat(X86InstPatternCat));
 
@@ -60,20 +68,25 @@ static std::string dagToString(const Init *I) {
 }
 
 /// Return true if \p I (or any node in the DAG rooted at \p I) is a DefInit
-/// whose record name is in \p Names.
-static bool dagRefersToAny(const Init *I, const StringSet<> &Names) {
+/// whose record name contains any requested substring in \p RequestedPatterns.
+static bool dagRefersToAny(const Init *I,
+                           const std::vector<std::string> &RequestedPatterns) {
   if (!I)
     return false;
   if (const auto *DI = dyn_cast<DagInit>(I)) {
-    if (dagRefersToAny(DI->getOperator(), Names))
+    if (dagRefersToAny(DI->getOperator(), RequestedPatterns))
       return true;
     for (unsigned Idx = 0, E = DI->getNumArgs(); Idx < E; ++Idx)
-      if (dagRefersToAny(DI->getArg(Idx), Names))
+      if (dagRefersToAny(DI->getArg(Idx), RequestedPatterns))
         return true;
     return false;
   }
-  if (const auto *DefI = dyn_cast<DefInit>(I))
-    return Names.count(DefI->getDef()->getName()) > 0;
+  if (const auto *DefI = dyn_cast<DefInit>(I)) {
+    StringRef DefName = DefI->getDef()->getName();
+    for (const std::string &Pattern : RequestedPatterns)
+      if (DefName.contains(Pattern))
+        return true;
+  }
   return false;
 }
 
@@ -87,28 +100,28 @@ public:
 };
 
 void X86InstPatternEmitter::run(raw_ostream &OS) {
-  // Parse the comma-separated list of instruction record names.
-  StringSet<> RequestedNames;
+  // Parse the comma-separated list of instruction record-name substrings.
+  std::vector<std::string> RequestedPatterns;
   StringRef Input(InstRecordNames);
   while (!Input.empty()) {
     auto [Head, Tail] = Input.split(',');
     Head = Head.trim();
     if (!Head.empty())
-      RequestedNames.insert(Head);
+      RequestedPatterns.push_back(Head.str());
     Input = Tail;
   }
 
-  if (RequestedNames.empty())
-    PrintFatalError("No instruction record names specified; use "
+  if (RequestedPatterns.empty())
+    PrintFatalError("No instruction record-name substrings specified; use "
                     "-inst-record=<name1,name2,...>");
 
   emitSourceFileHeader("X86 instruction-selection patterns", OS, Records);
 
-  // Emit header comment listing the requested instruction names.
-  OS << "// X86 patterns referencing any of:";
+  // Emit header comment listing the requested substrings.
+  OS << "// X86 patterns referencing names containing any of:";
   bool First = true;
-  for (const auto &KV : RequestedNames) {
-    OS << (First ? " '" : ", '") << KV.getKey() << "'";
+  for (const std::string &Pattern : RequestedPatterns) {
+    OS << (First ? " '" : ", '") << Pattern << "'";
     First = false;
   }
   OS << "\n\n";
@@ -117,7 +130,8 @@ void X86InstPatternEmitter::run(raw_ostream &OS) {
   std::vector<const Record *> PatternDefs =
       Records.getAllDerivedDefinitions("Pattern");
 
-  // Filter to those whose Dst (ResultInstrs[0]) references a requested record.
+  // Filter to those whose Dst (ResultInstrs[0]) references a requested
+  // record-name substring.
   std::vector<const Record *> Matching;
   for (const Record *R : PatternDefs) {
     // Safely obtain ResultInstrs field without calling fatal error.
@@ -131,7 +145,7 @@ void X86InstPatternEmitter::run(raw_ostream &OS) {
     if (!Dst)
       continue;
 
-    if (dagRefersToAny(Dst, RequestedNames))
+    if (dagRefersToAny(Dst, RequestedPatterns))
       Matching.push_back(R);
   }
 
