@@ -29,6 +29,7 @@
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
@@ -92,7 +93,7 @@ private:
 
   /// For a given instruction, records what elements of it are demanded by
   /// downstream users.
-  DenseMap<const MachineInstr *, DemandedVL> DemandedVLs;
+  MapVector<const MachineInstr *, DemandedVL> DemandedVLs;
   SetVector<const MachineInstr *> Worklist;
 
   /// \returns all vector virtual registers that \p MI uses.
@@ -591,14 +592,6 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VABS_V:
   case RISCV::VABD_VV:
   case RISCV::VABDU_VV:
-
-  // XRivosVizip
-  case RISCV::RI_VZIPEVEN_VV:
-  case RISCV::RI_VZIPODD_VV:
-  case RISCV::RI_VZIP2A_VV:
-  case RISCV::RI_VZIP2B_VV:
-  case RISCV::RI_VUNZIP2A_VV:
-  case RISCV::RI_VUNZIP2B_VV:
     return MILog2SEW;
 
   // Vector Widening Shift Left Logical (Zvbb)
@@ -1235,13 +1228,6 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI,
   unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
   MachineOperand &VLOp = MI.getOperand(VLOpNum);
 
-  // If the VL is 1, then there is no need to reduce it. This is an
-  // optimization, not needed to preserve correctness.
-  if (VLOp.isImm() && VLOp.getImm() == 1) {
-    LLVM_DEBUG(dbgs() << "  Abort due to VL == 1, no point in reducing.\n");
-    return false;
-  }
-
   assert((CommonVL.isImm() || CommonVL.getReg().isVirtual()) &&
          "Expected VL to be an Imm or virtual Reg");
 
@@ -1271,10 +1257,25 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI,
     VLOp.ChangeToImmediate(CommonVL.getImm());
     return true;
   }
-  const MachineInstr *VLMI = MRI->getVRegDef(CommonVL.getReg());
-  if (!MDT->dominates(VLMI, &MI)) {
-    LLVM_DEBUG(dbgs() << "  Abort due to VL not dominating.\n");
-    return false;
+  MachineInstr *VLMI = MRI->getVRegDef(CommonVL.getReg());
+  auto VLDominates = [this, &VLMI](const MachineInstr &MI) {
+    return MDT->dominates(VLMI, &MI);
+  };
+  if (!VLDominates(MI)) {
+    assert(MI.getNumExplicitDefs() == 1);
+    auto Uses = MRI->use_instructions(MI.getOperand(0).getReg());
+    auto UsesSameBB = make_filter_range(Uses, [&MI](const MachineInstr &Use) {
+      return Use.getParent() == MI.getParent();
+    });
+    if (VLMI->getParent() == MI.getParent() &&
+        all_of(UsesSameBB, VLDominates) &&
+        RISCVInstrInfo::isSafeToMove(MI, std::next(VLMI->getIterator()))) {
+      VLMI->getParent()->splice(std::next(VLMI->getIterator()), MI.getParent(),
+                                MI.getIterator());
+    } else {
+      LLVM_DEBUG(dbgs() << "  Abort due to VL not dominating.\n");
+      return false;
+    }
   }
   LLVM_DEBUG(dbgs() << "  Reduce VL from " << VLOp << " to "
                     << printReg(CommonVL.getReg(), MRI->getTargetRegisterInfo())
