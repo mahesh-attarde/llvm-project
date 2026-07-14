@@ -80,7 +80,7 @@ static void applyInsertVecEltToScalarToVec(MachineInstr &MI,
   B.setInstrAndDebugLoc(MI);
   Register Dst = MI.getOperand(0).getReg();
   Register Elt = MI.getOperand(2).getReg();
-  B.buildInstr(X86::G_SCALAR_TO_VECTOR, {Dst}, {Elt});
+  B.buildScalarToVector(Dst, Elt);
   MI.eraseFromParent();
 }
 

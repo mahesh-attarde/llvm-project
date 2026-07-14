@@ -560,6 +560,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampNumElements(0, v2s64, s64MaxVector)
       .moreElementsToNextPow2(0);
 
+  getActionDefinitionsBuilder(G_SCALAR_TO_VECTOR)
+      .legalFor(HasSSE1, {{v4s32, s32}})
+      .legalFor(HasSSE2, {{v2s64, s64}});
+
   getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
       .legalFor(HasSSE1, {{v4s32, s32, sMaxScalar}})
       .legalFor(HasSSE2, {{v16s8, s8, sMaxScalar},

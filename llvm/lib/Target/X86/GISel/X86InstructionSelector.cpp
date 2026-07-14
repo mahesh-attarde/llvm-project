@@ -499,7 +499,7 @@ bool X86InstructionSelector::select(MachineInstr &I) {
     return selectSelect(I, MRI, MF);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
     return selectInsertVectorElt(I, MRI, MF);
-  case X86::G_SCALAR_TO_VECTOR:
+  case TargetOpcode::G_SCALAR_TO_VECTOR:
     return selectScalarToVector(I, MRI);
   }
 
@@ -2072,7 +2072,7 @@ bool X86InstructionSelector::selectInsertVectorElt(MachineInstr &I,
   // the GPR→XMM MOVQ entirely and use the XMM source directly.
   if (EltSize == 64 && NumElts == 2 && Idx == 1) {
     MachineInstr *VecDef = MRI.getVRegDef(VecReg);
-    if (VecDef && VecDef->getOpcode() == X86::G_SCALAR_TO_VECTOR) {
+    if (VecDef && VecDef->getOpcode() == TargetOpcode::G_SCALAR_TO_VECTOR) {
       unsigned MovOpc = getScalarToVecOpcode(64);
       unsigned UnpckOpc = STI.hasAVX512() && STI.hasVLX() ? X86::VPUNPCKLQDQZ128rr
                           : STI.hasAVX()                  ? X86::VPUNPCKLQDQrr
@@ -2145,7 +2145,7 @@ bool X86InstructionSelector::selectInsertVectorElt(MachineInstr &I,
 
 bool X86InstructionSelector::selectScalarToVector(MachineInstr &I,
                                                   MachineRegisterInfo &MRI) {
-  assert(I.getOpcode() == X86::G_SCALAR_TO_VECTOR);
+  assert(I.getOpcode() == TargetOpcode::G_SCALAR_TO_VECTOR);
 
   Register DstReg = I.getOperand(0).getReg();
   Register SrcReg = I.getOperand(1).getReg();
