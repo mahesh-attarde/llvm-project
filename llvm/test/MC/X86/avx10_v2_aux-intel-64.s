@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64 -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding -mattr=+avx10-v2-aux,+avx512vl %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64 -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding -mattr=+avx10v2aux,+avx512vl %s | FileCheck %s
 
 //
 // Group A: PS->8bit truncating conversions

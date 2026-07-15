@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple i386 --show-encoding -mattr=+avx10-v2-aux,+avx512vl %s | FileCheck %s
+// RUN: llvm-mc -triple i386 --show-encoding -mattr=+avx10v2aux,+avx512vl %s | FileCheck %s
 
 //
 // Group A: PS->8bit truncating conversions
@@ -22,6 +22,14 @@
 // CHECK: encoding: [0x62,0xf5,0x7e,0x48,0x39,0x07]
           vcvtps2bf8 (%edi), %xmm0
 
+// CHECK: vcvtps2bf8y (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7e,0x28,0x39,0x07]
+          vcvtps2bf8y (%edi), %xmm0
+
+// CHECK: vcvtps2bf8x (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7e,0x08,0x39,0x07]
+          vcvtps2bf8x (%edi), %xmm0
+
 // CHECK: vcvtps2bf8 %zmm1, %xmm0 {%k1}
 // CHECK: encoding: [0x62,0xf5,0x7e,0x49,0x39,0xc1]
           vcvtps2bf8 %zmm1, %xmm0 {%k1}
@@ -29,6 +37,10 @@
 // CHECK: vcvtps2bf8 %zmm1, %xmm0 {%k1} {z}
 // CHECK: encoding: [0x62,0xf5,0x7e,0xc9,0x39,0xc1]
           vcvtps2bf8 %zmm1, %xmm0 {%k1} {z}
+
+// CHECK: vcvtps2bf8 (%edi){1to16}, %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7e,0x58,0x39,0x07]
+          vcvtps2bf8 (%edi){1to16}, %xmm0
 
 // vcvtps2bf8s
 
@@ -44,6 +56,18 @@
 // CHECK: encoding: [0x62,0xf5,0x7e,0x08,0x3b,0xc1]
           vcvtps2bf8s %xmm1, %xmm0
 
+// CHECK: vcvtps2bf8s (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7e,0x48,0x3b,0x07]
+          vcvtps2bf8s (%edi), %xmm0
+
+// CHECK: vcvtps2bf8sy (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7e,0x28,0x3b,0x07]
+          vcvtps2bf8sy (%edi), %xmm0
+
+// CHECK: vcvtps2bf8sx (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7e,0x08,0x3b,0x07]
+          vcvtps2bf8sx (%edi), %xmm0
+
 // CHECK: vcvtps2bf8s %zmm1, %xmm0 {%k1}
 // CHECK: encoding: [0x62,0xf5,0x7e,0x49,0x3b,0xc1]
           vcvtps2bf8s %zmm1, %xmm0 {%k1}
@@ -51,6 +75,10 @@
 // CHECK: vcvtps2bf8s %zmm1, %xmm0 {%k1} {z}
 // CHECK: encoding: [0x62,0xf5,0x7e,0xc9,0x3b,0xc1]
           vcvtps2bf8s %zmm1, %xmm0 {%k1} {z}
+
+// CHECK: vcvtps2bf8s (%edi){1to16}, %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7e,0x58,0x3b,0x07]
+          vcvtps2bf8s (%edi){1to16}, %xmm0
 
 // vcvtps2hf8
 
@@ -66,6 +94,18 @@
 // CHECK: encoding: [0x62,0xf5,0x7e,0x08,0x38,0xc1]
           vcvtps2hf8 %xmm1, %xmm0
 
+// CHECK: vcvtps2hf8 (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7e,0x48,0x38,0x07]
+          vcvtps2hf8 (%edi), %xmm0
+
+// CHECK: vcvtps2hf8y (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7e,0x28,0x38,0x07]
+          vcvtps2hf8y (%edi), %xmm0
+
+// CHECK: vcvtps2hf8x (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7e,0x08,0x38,0x07]
+          vcvtps2hf8x (%edi), %xmm0
+
 // CHECK: vcvtps2hf8 %zmm1, %xmm0 {%k1}
 // CHECK: encoding: [0x62,0xf5,0x7e,0x49,0x38,0xc1]
           vcvtps2hf8 %zmm1, %xmm0 {%k1}
@@ -73,6 +113,10 @@
 // CHECK: vcvtps2hf8 %zmm1, %xmm0 {%k1} {z}
 // CHECK: encoding: [0x62,0xf5,0x7e,0xc9,0x38,0xc1]
           vcvtps2hf8 %zmm1, %xmm0 {%k1} {z}
+
+// CHECK: vcvtps2hf8 (%edi){1to16}, %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7e,0x58,0x38,0x07]
+          vcvtps2hf8 (%edi){1to16}, %xmm0
 
 // vcvtps2hf8s
 
@@ -88,6 +132,18 @@
 // CHECK: encoding: [0x62,0xf5,0x7e,0x08,0x3a,0xc1]
           vcvtps2hf8s %xmm1, %xmm0
 
+// CHECK: vcvtps2hf8s (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7e,0x48,0x3a,0x07]
+          vcvtps2hf8s (%edi), %xmm0
+
+// CHECK: vcvtps2hf8sy (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7e,0x28,0x3a,0x07]
+          vcvtps2hf8sy (%edi), %xmm0
+
+// CHECK: vcvtps2hf8sx (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7e,0x08,0x3a,0x07]
+          vcvtps2hf8sx (%edi), %xmm0
+
 // CHECK: vcvtps2hf8s %zmm1, %xmm0 {%k1}
 // CHECK: encoding: [0x62,0xf5,0x7e,0x49,0x3a,0xc1]
           vcvtps2hf8s %zmm1, %xmm0 {%k1}
@@ -95,6 +151,10 @@
 // CHECK: vcvtps2hf8s %zmm1, %xmm0 {%k1} {z}
 // CHECK: encoding: [0x62,0xf5,0x7e,0xc9,0x3a,0xc1]
           vcvtps2hf8s %zmm1, %xmm0 {%k1} {z}
+
+// CHECK: vcvtps2hf8s (%edi){1to16}, %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7e,0x58,0x3a,0x07]
+          vcvtps2hf8s (%edi){1to16}, %xmm0
 
 // vcvtrops2hf8
 
@@ -110,6 +170,18 @@
 // CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x38,0xc1]
           vcvtrops2hf8 %xmm1, %xmm0
 
+// CHECK: vcvtrops2hf8 (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7d,0x48,0x38,0x07]
+          vcvtrops2hf8 (%edi), %xmm0
+
+// CHECK: vcvtrops2hf8y (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7d,0x28,0x38,0x07]
+          vcvtrops2hf8y (%edi), %xmm0
+
+// CHECK: vcvtrops2hf8x (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x38,0x07]
+          vcvtrops2hf8x (%edi), %xmm0
+
 // CHECK: vcvtrops2hf8 %zmm1, %xmm0 {%k1}
 // CHECK: encoding: [0x62,0xf5,0x7d,0x49,0x38,0xc1]
           vcvtrops2hf8 %zmm1, %xmm0 {%k1}
@@ -117,6 +189,10 @@
 // CHECK: vcvtrops2hf8 %zmm1, %xmm0 {%k1} {z}
 // CHECK: encoding: [0x62,0xf5,0x7d,0xc9,0x38,0xc1]
           vcvtrops2hf8 %zmm1, %xmm0 {%k1} {z}
+
+// CHECK: vcvtrops2hf8 (%edi){1to16}, %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7d,0x58,0x38,0x07]
+          vcvtrops2hf8 (%edi){1to16}, %xmm0
 
 // vcvtrops2hf8s
 
@@ -132,6 +208,18 @@
 // CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x3a,0xc1]
           vcvtrops2hf8s %xmm1, %xmm0
 
+// CHECK: vcvtrops2hf8s (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7d,0x48,0x3a,0x07]
+          vcvtrops2hf8s (%edi), %xmm0
+
+// CHECK: vcvtrops2hf8sy (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7d,0x28,0x3a,0x07]
+          vcvtrops2hf8sy (%edi), %xmm0
+
+// CHECK: vcvtrops2hf8sx (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x3a,0x07]
+          vcvtrops2hf8sx (%edi), %xmm0
+
 // CHECK: vcvtrops2hf8s %zmm1, %xmm0 {%k1}
 // CHECK: encoding: [0x62,0xf5,0x7d,0x49,0x3a,0xc1]
           vcvtrops2hf8s %zmm1, %xmm0 {%k1}
@@ -139,6 +227,10 @@
 // CHECK: vcvtrops2hf8s %zmm1, %xmm0 {%k1} {z}
 // CHECK: encoding: [0x62,0xf5,0x7d,0xc9,0x3a,0xc1]
           vcvtrops2hf8s %zmm1, %xmm0 {%k1} {z}
+
+// CHECK: vcvtrops2hf8s (%edi){1to16}, %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7d,0x58,0x3a,0x07]
+          vcvtrops2hf8s (%edi){1to16}, %xmm0
 
 //
 // Group B: Bias PS->8bit conversions (3-operand)
@@ -166,6 +258,18 @@
 // CHECK: encoding: [0x62,0xf5,0x74,0xc9,0x39,0xc2]
           vcvtbiasps2bf8 %zmm2, %zmm1, %xmm0 {%k1} {z}
 
+// CHECK: vcvtbiasps2bf8 (%edi), %zmm1, %xmm0
+// CHECK: encoding: [0x62,0xf5,0x74,0x48,0x39,0x07]
+          vcvtbiasps2bf8 (%edi), %zmm1, %xmm0
+
+// CHECK: vcvtbiasps2bf8 (%edi), %ymm1, %xmm0
+// CHECK: encoding: [0x62,0xf5,0x74,0x28,0x39,0x07]
+          vcvtbiasps2bf8 (%edi), %ymm1, %xmm0
+
+// CHECK: vcvtbiasps2bf8 (%edi), %xmm1, %xmm0
+// CHECK: encoding: [0x62,0xf5,0x74,0x08,0x39,0x07]
+          vcvtbiasps2bf8 (%edi), %xmm1, %xmm0
+
 // vcvtbiasps2bf8s
 
 // CHECK: vcvtbiasps2bf8s %zmm2, %zmm1, %xmm0
@@ -187,6 +291,18 @@
 // CHECK: vcvtbiasps2bf8s %zmm2, %zmm1, %xmm0 {%k1} {z}
 // CHECK: encoding: [0x62,0xf5,0x74,0xc9,0x3b,0xc2]
           vcvtbiasps2bf8s %zmm2, %zmm1, %xmm0 {%k1} {z}
+
+// CHECK: vcvtbiasps2bf8s (%edi), %zmm1, %xmm0
+// CHECK: encoding: [0x62,0xf5,0x74,0x48,0x3b,0x07]
+          vcvtbiasps2bf8s (%edi), %zmm1, %xmm0
+
+// CHECK: vcvtbiasps2bf8s (%edi), %ymm1, %xmm0
+// CHECK: encoding: [0x62,0xf5,0x74,0x28,0x3b,0x07]
+          vcvtbiasps2bf8s (%edi), %ymm1, %xmm0
+
+// CHECK: vcvtbiasps2bf8s (%edi), %xmm1, %xmm0
+// CHECK: encoding: [0x62,0xf5,0x74,0x08,0x3b,0x07]
+          vcvtbiasps2bf8s (%edi), %xmm1, %xmm0
 
 // vcvtbiasps2hf8
 
@@ -210,6 +326,18 @@
 // CHECK: encoding: [0x62,0xf5,0x74,0xc9,0x38,0xc2]
           vcvtbiasps2hf8 %zmm2, %zmm1, %xmm0 {%k1} {z}
 
+// CHECK: vcvtbiasps2hf8 (%edi), %zmm1, %xmm0
+// CHECK: encoding: [0x62,0xf5,0x74,0x48,0x38,0x07]
+          vcvtbiasps2hf8 (%edi), %zmm1, %xmm0
+
+// CHECK: vcvtbiasps2hf8 (%edi), %ymm1, %xmm0
+// CHECK: encoding: [0x62,0xf5,0x74,0x28,0x38,0x07]
+          vcvtbiasps2hf8 (%edi), %ymm1, %xmm0
+
+// CHECK: vcvtbiasps2hf8 (%edi), %xmm1, %xmm0
+// CHECK: encoding: [0x62,0xf5,0x74,0x08,0x38,0x07]
+          vcvtbiasps2hf8 (%edi), %xmm1, %xmm0
+
 // vcvtbiasps2hf8s
 
 // CHECK: vcvtbiasps2hf8s %zmm2, %zmm1, %xmm0
@@ -231,6 +359,18 @@
 // CHECK: vcvtbiasps2hf8s %zmm2, %zmm1, %xmm0 {%k1} {z}
 // CHECK: encoding: [0x62,0xf5,0x74,0xc9,0x3a,0xc2]
           vcvtbiasps2hf8s %zmm2, %zmm1, %xmm0 {%k1} {z}
+
+// CHECK: vcvtbiasps2hf8s (%edi), %zmm1, %xmm0
+// CHECK: encoding: [0x62,0xf5,0x74,0x48,0x3a,0x07]
+          vcvtbiasps2hf8s (%edi), %zmm1, %xmm0
+
+// CHECK: vcvtbiasps2hf8s (%edi), %ymm1, %xmm0
+// CHECK: encoding: [0x62,0xf5,0x74,0x28,0x3a,0x07]
+          vcvtbiasps2hf8s (%edi), %ymm1, %xmm0
+
+// CHECK: vcvtbiasps2hf8s (%edi), %xmm1, %xmm0
+// CHECK: encoding: [0x62,0xf5,0x74,0x08,0x3a,0x07]
+          vcvtbiasps2hf8s (%edi), %xmm1, %xmm0
 
 //
 // Group C: 8bit->PS expanding conversions
@@ -258,6 +398,18 @@
 // CHECK: encoding: [0x62,0xf5,0xfc,0xc9,0x36,0xc1]
           vcvtbf82ps %xmm1, %zmm0 {%k1} {z}
 
+// CHECK: vcvtbf82ps (%edi), %zmm0
+// CHECK: encoding: [0x62,0xf5,0xfc,0x48,0x36,0x07]
+          vcvtbf82ps (%edi), %zmm0
+
+// CHECK: vcvtbf82ps (%edi), %ymm0
+// CHECK: encoding: [0x62,0xf5,0xfc,0x28,0x36,0x07]
+          vcvtbf82ps (%edi), %ymm0
+
+// CHECK: vcvtbf82ps (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0xfc,0x08,0x36,0x07]
+          vcvtbf82ps (%edi), %xmm0
+
 // vcvthf82ps
 
 // CHECK: vcvthf82ps %xmm1, %zmm0
@@ -280,6 +432,18 @@
 // CHECK: encoding: [0x62,0xf5,0x7c,0xc9,0x36,0xc1]
           vcvthf82ps %xmm1, %zmm0 {%k1} {z}
 
+// CHECK: vcvthf82ps (%edi), %zmm0
+// CHECK: encoding: [0x62,0xf5,0x7c,0x48,0x36,0x07]
+          vcvthf82ps (%edi), %zmm0
+
+// CHECK: vcvthf82ps (%edi), %ymm0
+// CHECK: encoding: [0x62,0xf5,0x7c,0x28,0x36,0x07]
+          vcvthf82ps (%edi), %ymm0
+
+// CHECK: vcvthf82ps (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7c,0x08,0x36,0x07]
+          vcvthf82ps (%edi), %xmm0
+
 //
 // Group D: BF8/HF8->BF4S truncations
 //
@@ -298,6 +462,18 @@
 // CHECK: encoding: [0x62,0xf5,0xfe,0x08,0x3d,0xc8]
           vcvtbf82bf4s %xmm1, %xmm0
 
+// CHECK: vcvtbf82bf4s %zmm1, (%edi)
+// CHECK: encoding: [0x62,0xf5,0xfe,0x48,0x3d,0x0f]
+          vcvtbf82bf4s %zmm1, (%edi)
+
+// CHECK: vcvtbf82bf4s %ymm1, (%edi)
+// CHECK: encoding: [0x62,0xf5,0xfe,0x28,0x3d,0x0f]
+          vcvtbf82bf4s %ymm1, (%edi)
+
+// CHECK: vcvtbf82bf4s %xmm1, (%edi)
+// CHECK: encoding: [0x62,0xf5,0xfe,0x08,0x3d,0x0f]
+          vcvtbf82bf4s %xmm1, (%edi)
+
 // vcvthf82bf4s
 
 // CHECK: vcvthf82bf4s %zmm1, %ymm0
@@ -311,6 +487,18 @@
 // CHECK: vcvthf82bf4s %xmm1, %xmm0
 // CHECK: encoding: [0x62,0xf5,0x7e,0x08,0x3d,0xc8]
           vcvthf82bf4s %xmm1, %xmm0
+
+// CHECK: vcvthf82bf4s %zmm1, (%edi)
+// CHECK: encoding: [0x62,0xf5,0x7e,0x48,0x3d,0x0f]
+          vcvthf82bf4s %zmm1, (%edi)
+
+// CHECK: vcvthf82bf4s %ymm1, (%edi)
+// CHECK: encoding: [0x62,0xf5,0x7e,0x28,0x3d,0x0f]
+          vcvthf82bf4s %ymm1, (%edi)
+
+// CHECK: vcvthf82bf4s %xmm1, (%edi)
+// CHECK: encoding: [0x62,0xf5,0x7e,0x08,0x3d,0x0f]
+          vcvthf82bf4s %xmm1, (%edi)
 
 //
 // Group E: Same-size reg-only conversions (no masking)
@@ -369,6 +557,18 @@
 // CHECK: vcvtbf42hf8 %ymm1, %zmm0 {%k1} {z}
 // CHECK: encoding: [0x62,0xf5,0x7c,0xc9,0x37,0xc1]
           vcvtbf42hf8 %ymm1, %zmm0 {%k1} {z}
+
+// CHECK: vcvtbf42hf8 (%edi), %zmm0
+// CHECK: encoding: [0x62,0xf5,0x7c,0x48,0x37,0x07]
+          vcvtbf42hf8 (%edi), %zmm0
+
+// CHECK: vcvtbf42hf8 (%edi), %ymm0
+// CHECK: encoding: [0x62,0xf5,0x7c,0x28,0x37,0x07]
+          vcvtbf42hf8 (%edi), %ymm0
+
+// CHECK: vcvtbf42hf8 (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf5,0x7c,0x08,0x37,0x07]
+          vcvtbf42hf8 (%edi), %xmm0
 
 // vcvtbf62hf8
 
@@ -438,6 +638,18 @@
 // CHECK: encoding: [0x62,0xf2,0x7e,0xc9,0x41,0xc8]
           vpmovssdb %zmm1, %xmm0 {%k1} {z}
 
+// CHECK: vpmovssdb %zmm1, (%edi)
+// CHECK: encoding: [0x62,0xf2,0x7e,0x48,0x41,0x0f]
+          vpmovssdb %zmm1, (%edi)
+
+// CHECK: vpmovssdb %ymm1, (%edi)
+// CHECK: encoding: [0x62,0xf2,0x7e,0x28,0x41,0x0f]
+          vpmovssdb %ymm1, (%edi)
+
+// CHECK: vpmovssdb %xmm1, (%edi)
+// CHECK: encoding: [0x62,0xf2,0x7e,0x08,0x41,0x0f]
+          vpmovssdb %xmm1, (%edi)
+
 //
 // Group H: VUNPACKB - Byte unpack with immediate
 //
@@ -461,3 +673,15 @@
 // CHECK: vunpackb $1, %zmm1, %zmm0 {%k1} {z}
 // CHECK: encoding: [0x62,0xf3,0x7c,0xc9,0x3d,0xc1,0x01]
           vunpackb $1, %zmm1, %zmm0 {%k1} {z}
+
+// CHECK: vunpackb $1, (%edi), %zmm0
+// CHECK: encoding: [0x62,0xf3,0x7c,0x48,0x3d,0x07,0x01]
+          vunpackb $1, (%edi), %zmm0
+
+// CHECK: vunpackb $1, (%edi), %ymm0
+// CHECK: encoding: [0x62,0xf3,0x7c,0x28,0x3d,0x07,0x01]
+          vunpackb $1, (%edi), %ymm0
+
+// CHECK: vunpackb $1, (%edi), %xmm0
+// CHECK: encoding: [0x62,0xf3,0x7c,0x08,0x3d,0x07,0x01]
+          vunpackb $1, (%edi), %xmm0

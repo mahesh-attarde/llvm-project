@@ -361,7 +361,7 @@ def FeatureAVX10_2 : SubtargetFeature<"avx10.2", "HasAVX10_2", "true",
 def FeatureAVX10_2_512 : SubtargetFeature<"avx10.2-512", "HasAVX10_2_512", "true",
                                           "Support AVX10.2 instruction",
                                           [FeatureAVX10_2]>;
-def FeatureAVX10_V2_AUX : SubtargetFeature<"avx10-v2-aux", "HasAVX10_V2_AUX", "true",
+def FeatureAVX10_V2_AUX : SubtargetFeature<"avx10v2aux", "HasAVX10_V2_AUX", "true",
                                           "Support AVX10 V2 AUX instructions",
                                           [FeatureAVX10_2]>;
 def FeatureEGPR : SubtargetFeature<"egpr", "HasEGPR", "true",
