@@ -536,6 +536,15 @@ let Predicates = [HasAVX10_V2_AUX] in {
                                    SchedWriteVecTruncate, truncstore_ss_vi8,
                                    masked_truncstore_ss_vi8, X86vtruncss,
                                    X86vmtruncss>;
+
+  // Explicit patterns for 512-bit VMTRUNCSS (intrinsic lowering produces this
+  // SDNode directly, but avx512_trunc_db generates vselect_mask patterns for Z)
+  def : Pat<(v16i8 (X86vmtruncss (v16i32 VR512:$src), (v16i8 VR128X:$src0),
+                                  VK16WM:$mask)),
+            (VPMOVSSDBZrrk VR128X:$src0, VK16WM:$mask, VR512:$src)>;
+  def : Pat<(v16i8 (X86vmtruncss (v16i32 VR512:$src), v16i8x_info.ImmAllZerosV,
+                                  VK16WM:$mask)),
+            (VPMOVSSDBZrrkz VK16WM:$mask, VR512:$src)>;
 }
 
 //-------------------------------------------------

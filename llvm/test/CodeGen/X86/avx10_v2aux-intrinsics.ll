@@ -1713,6 +1713,95 @@ declare <16 x i8> @llvm.x86.avx10.mask.pmovss.db.128(<4 x i32>, <16 x i8>, i8)
 declare <16 x i8> @llvm.x86.avx10.mask.pmovss.db.256(<8 x i32>, <16 x i8>, i8)
 declare <16 x i8> @llvm.x86.avx10.mask.pmovss.db.512(<16 x i32>, <16 x i8>, i16)
 
+; Masked tests for vpmovssdb
+define <16 x i8> @test_int_x86_avx10_mask_pmovssdb_128(<4 x i32> %a, <16 x i8> %passthru, i8 %mask) {
+; X64-LABEL: test_int_x86_avx10_mask_pmovssdb_128:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpmovssdb %xmm0, %xmm2 # encoding: [0x62,0xf2,0x7e,0x08,0x41,0xc2]
+; X64-NEXT:    vpmovssdb %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0x7e,0x09,0x41,0xc1]
+; X64-NEXT:    vpaddb %xmm1, %xmm2, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xe9,0xfc,0xc9]
+; X64-NEXT:    vpmovssdb %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7e,0x89,0x41,0xc0]
+; X64-NEXT:    vpaddb %xmm0, %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf1,0xfc,0xc0]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_avx10_mask_pmovssdb_128:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpmovssdb %xmm0, %xmm2 # encoding: [0x62,0xf2,0x7e,0x08,0x41,0xc2]
+; X86-NEXT:    vpmovssdb %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0x7e,0x09,0x41,0xc1]
+; X86-NEXT:    vpaddb %xmm1, %xmm2, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xe9,0xfc,0xc9]
+; X86-NEXT:    vpmovssdb %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7e,0x89,0x41,0xc0]
+; X86-NEXT:    vpaddb %xmm0, %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf1,0xfc,0xc0]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %res0 = call <16 x i8> @llvm.x86.avx10.mask.pmovss.db.128(<4 x i32> %a, <16 x i8> %passthru, i8 -1)
+  %res1 = call <16 x i8> @llvm.x86.avx10.mask.pmovss.db.128(<4 x i32> %a, <16 x i8> %passthru, i8 %mask)
+  %res2 = call <16 x i8> @llvm.x86.avx10.mask.pmovss.db.128(<4 x i32> %a, <16 x i8> zeroinitializer, i8 %mask)
+  %add1 = add <16 x i8> %res0, %res1
+  %add2 = add <16 x i8> %add1, %res2
+  ret <16 x i8> %add2
+}
+
+define <16 x i8> @test_int_x86_avx10_mask_pmovssdb_256(<8 x i32> %a, <16 x i8> %passthru, i8 %mask) {
+; X64-LABEL: test_int_x86_avx10_mask_pmovssdb_256:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpmovssdb %ymm0, %xmm2 # encoding: [0x62,0xf2,0x7e,0x28,0x41,0xc2]
+; X64-NEXT:    vpmovssdb %ymm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0x7e,0x29,0x41,0xc1]
+; X64-NEXT:    vpaddb %xmm1, %xmm2, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xe9,0xfc,0xc9]
+; X64-NEXT:    vpmovssdb %ymm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7e,0xa9,0x41,0xc0]
+; X64-NEXT:    vpaddb %xmm0, %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf1,0xfc,0xc0]
+; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_avx10_mask_pmovssdb_256:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpmovssdb %ymm0, %xmm2 # encoding: [0x62,0xf2,0x7e,0x28,0x41,0xc2]
+; X86-NEXT:    vpmovssdb %ymm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0x7e,0x29,0x41,0xc1]
+; X86-NEXT:    vpaddb %xmm1, %xmm2, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xe9,0xfc,0xc9]
+; X86-NEXT:    vpmovssdb %ymm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7e,0xa9,0x41,0xc0]
+; X86-NEXT:    vpaddb %xmm0, %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf1,0xfc,0xc0]
+; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %res0 = call <16 x i8> @llvm.x86.avx10.mask.pmovss.db.256(<8 x i32> %a, <16 x i8> %passthru, i8 -1)
+  %res1 = call <16 x i8> @llvm.x86.avx10.mask.pmovss.db.256(<8 x i32> %a, <16 x i8> %passthru, i8 %mask)
+  %res2 = call <16 x i8> @llvm.x86.avx10.mask.pmovss.db.256(<8 x i32> %a, <16 x i8> zeroinitializer, i8 %mask)
+  %add1 = add <16 x i8> %res0, %res1
+  %add2 = add <16 x i8> %add1, %res2
+  ret <16 x i8> %add2
+}
+
+define <16 x i8> @test_int_x86_avx10_mask_pmovssdb_512(<16 x i32> %a, <16 x i8> %passthru, i16 %mask) {
+; X64-LABEL: test_int_x86_avx10_mask_pmovssdb_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpmovssdb %zmm0, %xmm2 # encoding: [0x62,0xf2,0x7e,0x48,0x41,0xc2]
+; X64-NEXT:    vpmovssdb %zmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0x7e,0x49,0x41,0xc1]
+; X64-NEXT:    vpaddb %xmm1, %xmm2, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xe9,0xfc,0xc9]
+; X64-NEXT:    vpmovssdb %zmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7e,0xc9,0x41,0xc0]
+; X64-NEXT:    vpaddb %xmm0, %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf1,0xfc,0xc0]
+; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_avx10_mask_pmovssdb_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpmovssdb %zmm0, %xmm2 # encoding: [0x62,0xf2,0x7e,0x48,0x41,0xc2]
+; X86-NEXT:    vpmovssdb %zmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0x7e,0x49,0x41,0xc1]
+; X86-NEXT:    vpaddb %xmm1, %xmm2, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xe9,0xfc,0xc9]
+; X86-NEXT:    vpmovssdb %zmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7e,0xc9,0x41,0xc0]
+; X86-NEXT:    vpaddb %xmm0, %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf1,0xfc,0xc0]
+; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %res0 = call <16 x i8> @llvm.x86.avx10.mask.pmovss.db.512(<16 x i32> %a, <16 x i8> %passthru, i16 -1)
+  %res1 = call <16 x i8> @llvm.x86.avx10.mask.pmovss.db.512(<16 x i32> %a, <16 x i8> %passthru, i16 %mask)
+  %res2 = call <16 x i8> @llvm.x86.avx10.mask.pmovss.db.512(<16 x i32> %a, <16 x i8> zeroinitializer, i16 %mask)
+  %add1 = add <16 x i8> %res0, %res1
+  %add2 = add <16 x i8> %add1, %res2
+  ret <16 x i8> %add2
+}
+
 ; Memory folding tests for vpmovssdb
 define <16 x i8> @test_int_x86_avx10_pmovssdb_mem_128(ptr %ptr_a) {
 ; X64-LABEL: test_int_x86_avx10_pmovssdb_mem_128:
