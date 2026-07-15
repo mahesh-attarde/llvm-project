@@ -298,6 +298,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512DQ = true;
     } else if (Feature == "+avx512bitalg") {
       HasAVX512BITALG = true;
+    } else if (Feature == "+avx512bmm") {
+      HasAVX512BMM = true;
     } else if (Feature == "+avx512bw") {
       HasAVX512BW = true;
     } else if (Feature == "+avx512vl") {
@@ -400,8 +402,6 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAMXMOVRS = true;
     } else if (Feature == "+amx-avx512") {
       HasAMXAVX512 = true;
-    } else if (Feature == "+amx-tf32") {
-      HasAMXTF32 = true;
     } else if (Feature == "+cmpccxadd") {
       HasCMPCCXADD = true;
     } else if (Feature == "+raoint") {
@@ -529,6 +529,10 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     }
   } else {
     DefineStd(Builder, "i386", Opts);
+  }
+
+  if (getTriple().isLFI()) {
+    Builder.defineMacro("__LFI__");
   }
 
   Builder.defineMacro("__SEG_GS");
@@ -854,6 +858,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVX512DQ__");
   if (HasAVX512BITALG)
     Builder.defineMacro("__AVX512BITALG__");
+  if (HasAVX512BMM)
+    Builder.defineMacro("__AVX512BMM__");
   if (HasAVX512BW)
     Builder.defineMacro("__AVX512BW__");
   if (HasAVX512VL) {
@@ -946,8 +952,6 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AMX_MOVRS__");
   if (HasAMXAVX512)
     Builder.defineMacro("__AMX_AVX512__");
-  if (HasAMXTF32)
-    Builder.defineMacro("__AMX_TF32__");
   if (HasCMPCCXADD)
     Builder.defineMacro("__CMPCCXADD__");
   if (HasRAOINT)
@@ -1086,7 +1090,6 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("amx-fp8", true)
       .Case("amx-int8", true)
       .Case("amx-movrs", true)
-      .Case("amx-tf32", true)
       .Case("amx-tile", true)
       .Case("avx", true)
       .Case("avx10.1", true)
@@ -1101,6 +1104,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("avx512fp16", true)
       .Case("avx512dq", true)
       .Case("avx512bitalg", true)
+      .Case("avx512bmm", true)
       .Case("avx512bw", true)
       .Case("avx512vl", true)
       .Case("avx512vbmi", true)
@@ -1208,7 +1212,6 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("amx-fp8", HasAMXFP8)
       .Case("amx-int8", HasAMXINT8)
       .Case("amx-movrs", HasAMXMOVRS)
-      .Case("amx-tf32", HasAMXTF32)
       .Case("amx-tile", HasAMXTILE)
       .Case("avx", SSELevel >= AVX)
       .Case("avx10.1", HasAVX10_1)
@@ -1223,6 +1226,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avx512fp16", HasAVX512FP16)
       .Case("avx512dq", HasAVX512DQ)
       .Case("avx512bitalg", HasAVX512BITALG)
+      .Case("avx512bmm", HasAVX512BMM)
       .Case("avx512bw", HasAVX512BW)
       .Case("avx512vl", HasAVX512VL)
       .Case("avx512vbmi", HasAVX512VBMI)
@@ -1391,11 +1395,9 @@ void X86TargetInfo::getCPUSpecificCPUDispatchFeatures(
 // rather than the full range of cpus.
 bool X86TargetInfo::validateCpuIs(StringRef FeatureStr) const {
   return llvm::StringSwitch<bool>(FeatureStr)
-#define X86_VENDOR(ENUM, STRING) .Case(STRING, true)
-#define X86_CPU_TYPE_ALIAS(ENUM, ALIAS) .Case(ALIAS, true)
-#define X86_CPU_TYPE(ENUM, STR) .Case(STR, true)
-#define X86_CPU_SUBTYPE_ALIAS(ENUM, ALIAS) .Case(ALIAS, true)
-#define X86_CPU_SUBTYPE(ENUM, STR) .Case(STR, true)
+#define X86_VENDOR(ENUM, STRING, ABI_VALUE) .Case(STRING, true)
+#define X86_CPU_TYPE(ENUM, STR, ABI_VALUE) .Case(STR, true)
+#define X86_CPU_SUBTYPE(ENUM, STR, ABI_VALUE) .Case(STR, true)
 #include "llvm/TargetParser/X86TargetParser.def"
       .Default(false);
 }

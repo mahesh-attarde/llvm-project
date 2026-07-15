@@ -631,7 +631,7 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
     MachineBasicBlock *MBB = MI->getParent();
     auto Liveness = MBB->computeRegisterLiveness(TRI, AMDGPU::VCC, MI, 16);
     if (Liveness != MachineBasicBlock::LQR_Dead) {
-      LLVM_DEBUG(dbgs() << "Not shrinking " << MI << " due to vcc liveness\n");
+      LLVM_DEBUG(dbgs() << "Not shrinking due to live vcc: " << *MI);
       return false;
     }
 
@@ -1001,6 +1001,8 @@ const TargetRegisterClass *SIFoldOperandsImpl::getRegSeqInit(
 
   for (unsigned I = 1, E = RegSeq.getNumExplicitOperands(); I != E; I += 2) {
     MachineOperand &SrcOp = RegSeq.getOperand(I);
+    if (SrcOp.getReg().isPhysical())
+      return nullptr;
     unsigned SubRegIdx = RegSeq.getOperand(I + 1).getImm();
 
     // Only accept reg_sequence with uniform reg class inputs for simplicity.
@@ -1374,7 +1376,6 @@ void SIFoldOperandsImpl::foldOperand(
       if (MovOp == AMDGPU::V_MOV_B16_t16_e64) {
         const auto &SrcOp = UseMI->getOperand(UseOpIdx);
         MachineOperand NewSrcOp(SrcOp);
-        MachineFunction *MF = UseMI->getMF();
         UseMI->removeOperand(1);
         UseMI->addOperand(*MF, MachineOperand::CreateImm(0)); // src0_modifiers
         UseMI->addOperand(NewSrcOp);                          // src0
@@ -1395,7 +1396,7 @@ void SIFoldOperandsImpl::foldOperand(
         UseMI->getOperand(0).getReg().isVirtual() &&
         !UseMI->getOperand(1).getSubReg() &&
         OpToFold.DefMI->implicit_operands().empty()) {
-      LLVM_DEBUG(dbgs() << "Folding " << OpToFold.OpToFold << "\n into "
+      LLVM_DEBUG(dbgs() << "Folding " << *OpToFold.OpToFold << "\n into "
                         << *UseMI);
       unsigned Size = TII->getOpSize(*UseMI, 1);
       Register UseReg = OpToFold.getReg();
@@ -1831,7 +1832,6 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
   if (CopiesToReplace.empty() && FoldList.empty())
     return Changed;
 
-  MachineFunction *MF = MI.getMF();
   // Make sure we add EXEC uses to any new v_mov instructions created.
   for (MachineInstr *Copy : CopiesToReplace)
     Copy->addImplicitDefUseOperands(*MF);

@@ -23,12 +23,10 @@
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
-#include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
 #include "flang/Optimizer/Support/Utils.h"
@@ -39,14 +37,12 @@
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -3962,9 +3958,6 @@ genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                mlir::acc::DataClause clause,
                Fortran::semantics::Symbol::Flag declareMappingFlag) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  const auto &langFeatures = converter.getFoldingContext().languageFeatures();
-  const bool managedMode =
-      langFeatures.IsEnabled(Fortran::common::LanguageFeature::CudaManaged);
   auto genCtors = [&](const mlir::Location operandLocation,
                       const Fortran::semantics::Symbol &symbol) {
     std::string globalName = converter.mangleName(symbol);
@@ -4001,15 +3994,10 @@ genGlobalCtors(Fortran::lower::AbstractConverter &converter,
     auto crtPos = builder.saveInsertionPoint();
     modBuilder.setInsertionPointAfter(globalOp);
     if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(globalOp.getType()))) {
-      if (!managedMode || clause == mlir::acc::DataClause::acc_declare_link ||
-          clause == mlir::acc::DataClause::acc_declare_device_resident) {
-        createDeclareGlobalOp<mlir::acc::GlobalConstructorOp,
-                              mlir::acc::CopyinOp, mlir::acc::DeclareEnterOp,
-                              ExitOp>(modBuilder, builder, operandLocation,
-                                      globalOp, clause,
-                                      declareGlobalCtorName.str(),
-                                      /*implicit=*/true, asFortran);
-      }
+      createDeclareGlobalOp<mlir::acc::GlobalConstructorOp, mlir::acc::CopyinOp,
+                            mlir::acc::DeclareEnterOp, ExitOp>(
+          modBuilder, builder, operandLocation, globalOp, clause,
+          declareGlobalCtorName.str(), /*implicit=*/true, asFortran);
       createDeclareAllocFunc<EntryOp>(modBuilder, builder, operandLocation,
                                       globalOp, clause);
       if constexpr (!std::is_same_v<EntryOp, ExitOp>)
@@ -4022,13 +4010,6 @@ genGlobalCtors(Fortran::lower::AbstractConverter &converter,
           declareGlobalCtorName.str(), /*implicit=*/false, asFortran);
     }
     if constexpr (!std::is_same_v<EntryOp, ExitOp>) {
-      if (managedMode &&
-          mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(globalOp.getType())) &&
-          clause != mlir::acc::DataClause::acc_declare_link &&
-          clause != mlir::acc::DataClause::acc_declare_device_resident) {
-        builder.restoreInsertionPoint(crtPos);
-        return;
-      }
       createDeclareGlobalOp<mlir::acc::GlobalDestructorOp,
                             mlir::acc::GetDevicePtrOp, mlir::acc::DeclareExitOp,
                             ExitOp>(
